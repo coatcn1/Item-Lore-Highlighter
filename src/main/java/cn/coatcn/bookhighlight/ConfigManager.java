@@ -22,15 +22,16 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * 配置管理：
- * 1）配置文件路径：.minecraft/config/book_highlight/targets_cn.json
+ * 1）配置文件路径：.minecraft/config/item_lore_highlighter/targets_cn.json
  * 2）内容包含：高亮颜色（ARGB 16 进制字符串）与中文关键字列表（targets）
- * 3）首次运行若不存在，则从 resources/book_highlight/targets_cn.json 拷贝默认文件
+ * 3）首次运行若不存在，则从 resources/item_lore_highlighter/targets_cn.json 拷贝默认文件
  */
 public class ConfigManager {
 
-    private static final String CONFIG_DIR_NAME = "book_highlight";
+    private static final String CONFIG_DIR_NAME = "item_lore_highlighter";
+    private static final String LEGACY_CONFIG_DIR = "book_highlight";
     private static final String CONFIG_FILE_NAME = "targets_cn.json";
-    private static final String INTERNAL_DEFAULT = "/book_highlight/targets_cn.json";
+    private static final String INTERNAL_DEFAULT = "/item_lore_highlighter/targets_cn.json";
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
@@ -50,23 +51,29 @@ public class ConfigManager {
 
     public synchronized void loadOrInit() {
         try {
-            Path cfgDir = FabricLoader.getInstance().getConfigDir().resolve(CONFIG_DIR_NAME);
+            Path configRoot = FabricLoader.getInstance().getConfigDir();
+            Path cfgDir = configRoot.resolve(CONFIG_DIR_NAME);
             Path cfgFile = cfgDir.resolve(CONFIG_FILE_NAME);
             if (!Files.exists(cfgDir)) {
                 Files.createDirectories(cfgDir);
             }
             if (!Files.exists(cfgFile)) {
-                // 从 jar 内置默认文件拷贝一份到 config 目录，便于用户修改
-                try (InputStream in = getClass().getResourceAsStream(INTERNAL_DEFAULT)) {
-                    if (in == null) {
-                        throw new IOException("找不到内置默认配置：" + INTERNAL_DEFAULT);
-                    }
-                    try (BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
-                         BufferedWriter bw = Files.newBufferedWriter(cfgFile, StandardCharsets.UTF_8)) {
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            bw.write(line);
-                            bw.newLine();
+                Path legacyFile = configRoot.resolve(LEGACY_CONFIG_DIR).resolve(CONFIG_FILE_NAME);
+                if (Files.exists(legacyFile)) {
+                    Files.copy(legacyFile, cfgFile);
+                } else {
+                    // 从 jar 内置默认文件拷贝一份到 config 目录，便于用户修改
+                    try (InputStream in = getClass().getResourceAsStream(INTERNAL_DEFAULT)) {
+                        if (in == null) {
+                            throw new IOException("找不到内置默认配置：" + INTERNAL_DEFAULT);
+                        }
+                        try (BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+                             BufferedWriter bw = Files.newBufferedWriter(cfgFile, StandardCharsets.UTF_8)) {
+                            String line;
+                            while ((line = br.readLine()) != null) {
+                                bw.write(line);
+                                bw.newLine();
+                            }
                         }
                     }
                 }

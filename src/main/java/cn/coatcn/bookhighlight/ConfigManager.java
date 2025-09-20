@@ -14,10 +14,9 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import org.lwjgl.glfw.GLFW;
 
@@ -41,7 +40,7 @@ public class ConfigManager {
         return INSTANCE;
     }
 
-    private Map<String, Boolean> targets = new LinkedHashMap<>();
+    private final List<TargetRule> targets = new ArrayList<>();
     private int highlightColor = 0x80FFD700; // 默认半透明金色
     private int openKey = GLFW.GLFW_KEY_B;
     private Path configPath;
@@ -78,26 +77,7 @@ public class ConfigManager {
                 JsonObject obj = GSON.fromJson(reader, JsonObject.class);
                 this.highlightColor = parseColor(obj.get("highlightColor").getAsString(), 0x80FFD700);
                 this.openKey = obj.has("openKey") ? obj.get("openKey").getAsInt() : GLFW.GLFW_KEY_B;
-                this.targets.clear();
-                if (obj.has("targets") && obj.get("targets").isJsonArray()) {
-                    obj.getAsJsonArray("targets").forEach(e -> {
-                        if (e.isJsonObject()) {
-                            JsonObject o = e.getAsJsonObject();
-                            String name = o.has("name") ? o.get("name").getAsString() : null;
-                            boolean visible = !o.has("visible") || o.get("visible").getAsBoolean();
-                            if (name != null && !name.isBlank()) {
-                                this.targets.put(name.trim(), visible);
-                            }
-                        }
-                    });
-                } else if (obj.has("names") && obj.get("names").isJsonArray()) {
-                    obj.getAsJsonArray("names").forEach(e -> {
-                        String s = e.getAsString();
-                        if (s != null && !s.isBlank()) {
-                            this.targets.put(s.trim(), true);
-                        }
-                    });
-                }
+                loadTargetsFromJson(obj);
             }
             this.lastModified = Files.getLastModifiedTime(cfgFile).toMillis();
         } catch (Exception e) {
@@ -117,25 +97,7 @@ public class ConfigManager {
                 JsonObject obj = GSON.fromJson(br, JsonObject.class);
                 this.highlightColor = parseColor(obj.get("highlightColor").getAsString(), 0x80FFD700);
                 this.openKey = obj.has("openKey") ? obj.get("openKey").getAsInt() : GLFW.GLFW_KEY_B;
-                if (obj.has("targets") && obj.get("targets").isJsonArray()) {
-                    obj.getAsJsonArray("targets").forEach(e -> {
-                        if (e.isJsonObject()) {
-                            JsonObject o = e.getAsJsonObject();
-                            String name = o.has("name") ? o.get("name").getAsString() : null;
-                            boolean visible = !o.has("visible") || o.get("visible").getAsBoolean();
-                            if (name != null && !name.isBlank()) {
-                                this.targets.put(name.trim(), visible);
-                            }
-                        }
-                    });
-                } else if (obj.has("names") && obj.get("names").isJsonArray()) {
-                    obj.getAsJsonArray("names").forEach(e -> {
-                        String s = e.getAsString();
-                        if (s != null && !s.isBlank()) {
-                            this.targets.put(s.trim(), true);
-                        }
-                    });
-                }
+                loadTargetsFromJson(obj);
             }
         } catch (IOException ignored) {}
     }
@@ -161,15 +123,28 @@ public class ConfigManager {
         }
     }
 
-    public Map<String, Boolean> getTargetMap() {
-        return targets;
+    public List<TargetRule> getTargets() {
+        if (targets.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<TargetRule> copy = new ArrayList<>(targets.size());
+        for (TargetRule target : targets) {
+            copy.add(target.copy());
+        }
+        return copy;
     }
 
-    public Set<String> getVisibleNamesCn() {
-        return targets.entrySet().stream()
-                .filter(Map.Entry::getValue)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
+    public List<TargetRule> getVisibleTargets() {
+        if (targets.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<TargetRule> visible = new ArrayList<>();
+        for (TargetRule target : targets) {
+            if (target.isVisible()) {
+                visible.add(target.copy());
+            }
+        }
+        return visible;
     }
 
     public int getOpenKey() {
@@ -201,10 +176,20 @@ public class ConfigManager {
             obj.addProperty("highlightColor", String.format("0x%08X", highlightColor));
             obj.addProperty("openKey", openKey);
             var arr = new com.google.gson.JsonArray();
-            for (var entry : targets.entrySet()) {
+            for (TargetRule target : targets) {
+                var keywords = new com.google.gson.JsonArray();
+                for (String keyword : target.getKeywords()) {
+                    keywords.add(keyword);
+                }
+                if (keywords.size() == 0) {
+                    continue;
+                }
                 JsonObject t = new JsonObject();
-                t.addProperty("name", entry.getKey());
-                t.addProperty("visible", entry.getValue());
+                t.add("keywords", keywords);
+                t.addProperty("visible", target.isVisible());
+                if (keywords.size() > 0) {
+                    t.addProperty("name", target.getKeywords().get(0));
+                }
                 arr.add(t);
             }
             obj.add("targets", arr);
@@ -231,11 +216,65 @@ public class ConfigManager {
     }
 
     // 更新关键字集合（来自界面），并立即保存
-    public void updateTargets(Map<String, Boolean> newTargets) {
+    public void updateTargets(List<TargetRule> newTargets) {
         this.targets.clear();
         if (newTargets != null) {
-            this.targets.putAll(newTargets);
+            for (TargetRule rule : newTargets) {
+                if (rule == null) continue;
+                List<String> keywords = rule.getKeywords();
+                if (keywords == null || keywords.isEmpty()) continue;
+                this.targets.add(new TargetRule(keywords, rule.isVisible()));
+            }
         }
         saveCurrentToConfig();
+    }
+
+    private void loadTargetsFromJson(JsonObject obj) {
+        this.targets.clear();
+        if (obj == null) {
+            return;
+        }
+        if (obj.has("targets") && obj.get("targets").isJsonArray()) {
+            obj.getAsJsonArray("targets").forEach(element -> {
+                if (!element.isJsonObject()) {
+                    return;
+                }
+                JsonObject targetObj = element.getAsJsonObject();
+                boolean visible = !targetObj.has("visible") || targetObj.get("visible").getAsBoolean();
+                List<String> keywords = extractKeywords(targetObj);
+                if (!keywords.isEmpty()) {
+                    this.targets.add(new TargetRule(keywords, visible));
+                }
+            });
+        } else if (obj.has("names") && obj.get("names").isJsonArray()) {
+            obj.getAsJsonArray("names").forEach(e -> {
+                String s = e.getAsString();
+                if (s != null && !s.isBlank()) {
+                    this.targets.add(new TargetRule(List.of(s.trim()), true));
+                }
+            });
+        }
+    }
+
+    private static List<String> extractKeywords(JsonObject targetObj) {
+        List<String> keywords = new ArrayList<>();
+        if (targetObj.has("keywords") && targetObj.get("keywords").isJsonArray()) {
+            targetObj.getAsJsonArray("keywords").forEach(element -> {
+                if (!element.isJsonPrimitive()) {
+                    return;
+                }
+                String value = element.getAsString();
+                if (value != null && !value.isBlank()) {
+                    keywords.add(value.trim());
+                }
+            });
+        }
+        if (keywords.isEmpty() && targetObj.has("name")) {
+            String name = targetObj.get("name").getAsString();
+            if (name != null && !name.isBlank()) {
+                keywords.add(name.trim());
+            }
+        }
+        return keywords;
     }
 }

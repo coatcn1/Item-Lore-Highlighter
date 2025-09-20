@@ -7,6 +7,7 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.GenericContainerScreenHandler;
+import net.minecraft.screen.HopperScreenHandler;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ShulkerBoxScreenHandler;
@@ -25,7 +26,9 @@ public abstract class HandledScreenMixin {
 
     private static boolean book_highlight$isSupportedContainer(ScreenHandler handler) {
         if (handler == null) return false;
-        return handler instanceof GenericContainerScreenHandler || handler instanceof ShulkerBoxScreenHandler;
+        return handler instanceof GenericContainerScreenHandler
+                || handler instanceof ShulkerBoxScreenHandler
+                || handler instanceof HopperScreenHandler;
     }
 
     // 关键：method 指向 intermediary 名 + 描述符；remap=false
@@ -43,7 +46,7 @@ public abstract class HandledScreenMixin {
         ItemStack stack = slot.getStack();
         if (stack == null || stack.isEmpty()) return;
 
-        var targets = ConfigManager.getInstance().getVisibleNamesCn();
+        var targets = ConfigManager.getInstance().getVisibleTargets();
         if (EnchantMatch.shouldHighlightItem(stack, targets)) {
             int color = ConfigManager.getInstance().getHighlightColor(); // ARGB
             // context 在 drawSlot 之前已平移到容器原点，这里无需再次加 x/y

@@ -2,8 +2,8 @@
   "openKey": 66,
   "highlightColor": "0x80FFD700",
   "targets": [
-    { "name": "赋予效果", "visible": true },
-    { "name": "传说", "visible": true },
-    { "name": "史诗", "visible": true }
+    { "keywords": ["赋予效果"], "visible": true },
+    { "keywords": ["传说"], "visible": true },
+    { "keywords": ["史诗"], "visible": true }
   ]
 }

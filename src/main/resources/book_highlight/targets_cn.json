@@ -1,9 +1,41 @@
 {
-  "openKey": 66,
-  "highlightColor": "0x80FFD700",
+  "highlightColor": "0x80FF00FF",
+  "openKey": 78,
   "targets": [
-    { "name": "赋予效果", "visible": true },
-    { "name": "传说", "visible": true },
-    { "name": "史诗", "visible": true }
+    {
+      "keywords": ["赋予效果"],
+      "visible": true,
+      "name": "赋予效果"
+    },
+    {
+      "keywords": ["传说"],
+      "visible": true,
+      "name": "传说"
+    },
+    {
+      "keywords": ["剑羽"],
+      "visible": true,
+      "name": "剑羽"
+    },
+    {
+      "keywords": ["珠宝 | 暴击率", "暴击率 +1."],
+      "visible": true,
+      "name": "珠宝 | 暴击率"
+    },
+    {
+      "keywords": ["攻击伤害 +4", "暴击率 +3"],
+      "visible": true,
+      "name": "攻击伤害 +4"
+    },
+    {
+      "keywords": ["速度 +4"],
+      "visible": true,
+      "name": "速度 +4"
+    },
+    {
+      "keywords": ["珠宝 | 暴击伤害", "暴击伤害 +3."],
+      "visible": true,
+      "name": "珠宝 | 暴击伤害"
+    }
   ]
 }

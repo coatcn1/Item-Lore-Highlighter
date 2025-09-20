@@ -23,9 +23,9 @@
       "name": "珠宝 | 暴击率"
     },
     {
-      "keywords": ["攻击伤害 +4", "暴击率 +3"],
+      "keywords": ["攻击伤害 +4."],
       "visible": true,
-      "name": "攻击伤害 +4"
+      "name": "攻击伤害 +4."
     },
     {
       "keywords": ["速度 +4"],
@@ -36,6 +36,11 @@
       "keywords": ["珠宝 | 暴击伤害", "暴击伤害 +3."],
       "visible": true,
       "name": "珠宝 | 暴击伤害"
+    },
+    {
+      "keywords": ["攻击伤害 4.", "PVE伤害 +"],
+      "visible": true,
+      "name": "攻击伤害 4."
     }
   ]
 }

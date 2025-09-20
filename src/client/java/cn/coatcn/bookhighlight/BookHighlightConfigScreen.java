@@ -96,6 +96,24 @@ public class BookHighlightConfigScreen extends Screen {
     }
 
     @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (addButton != null && addButton.isMouseOver(mouseX, mouseY)) {
+            if (addButton.mouseClicked(mouseX, mouseY, button)) {
+                setFocused(addButton);
+                return true;
+            }
+        }
+        if (doneButton != null && doneButton.isMouseOver(mouseX, mouseY)) {
+            if (doneButton.mouseClicked(mouseX, mouseY, button)) {
+                setFocused(doneButton);
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+
+    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
         super.render(context, mouseX, mouseY, delta);

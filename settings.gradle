@@ -1,0 +1,19 @@
+// settings.gradle —— 最简正确版
+
+pluginManagement {
+    repositories {
+        // 用于解析 fabric-loom 插件
+        maven { url = "https://maven.fabricmc.net/" }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id "org.gradle.toolchains.foojay-resolver-convention" version "0.8.0"
+}
+
+// ⚠️ 不要在这里写 dependencyResolutionManagement/repositoriesMode
+//    （否则会把 Loom 注入的仓库给“忽略掉”）
+
+rootProject.name = "book-highlight"

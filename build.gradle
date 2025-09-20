@@ -1,0 +1,98 @@
+plugins {
+    id 'fabric-loom' version '1.6.10'
+    id 'maven-publish'
+}
+
+group = project.maven_group
+version = project.mod_version
+
+base { archivesName = project.archives_base_name }
+
+repositories {
+    // Loom 会自动注入 Mojang/Fabric 的仓库；这里补充：
+    maven { url = 'https://repo.spongepowered.org/repository/maven-public' } // Sponge 仓库，提供 org.spongepowered:mixin
+    maven { url = 'https://maven.terraformersmc.com/releases/' }
+    mavenCentral()
+}
+
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "book_highlight" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+
+    // 生成并打包 refmap，名称要和 mixins.json 一致
+    mixin {
+        defaultRefmapName.set("book_highlight-refmap.json")
+    }
+
+    // （可选）你之前若配置了 Vineflower 反编译器，可保留
+    // decompilers {
+    //     vineflower {
+    //         memory = 4096L
+    //         maxThreads = 4
+    //     }
+    // }
+}
+
+dependencies {
+    // 版本号走 gradle.properties
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    modCompileOnly("com.terraformersmc:modmenu:${project.modmenu_version}") {
+        transitive = false
+    }
+
+
+    // ★ Mixin 注解处理器（与运行时 0.8.7 对齐，避免编译期拿不到）
+    annotationProcessor "org.spongepowered:mixin:0.8.7:processor"
+    compileOnly "org.spongepowered:mixin:0.8.7"
+}
+
+processResources {
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": inputs.properties.version
+    }
+}
+
+// ★ 编译目标：Java 17（千万不要再是 21）
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 17
+}
+
+// ★ 强制使用 Java 17 的 Toolchain（Gradle 会自动找/下对应 JDK）
+java {
+    withSourcesJar()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+        // vendor / implementation 可不写，默认即可
+    }
+    // 兼容性也同步为 17（可选，但写上更直观）
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jar {
+    inputs.property "archivesName", project.base.archivesName
+    from("LICENSE") { rename { "${it}_${inputs.properties.archivesName}" } }
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+    repositories {
+        // 需要的话再填发布仓库
+    }
+}
